@@ -1,0 +1,22 @@
+[
+{ "name": "admin_aec_blockQueueStatus", "params": [""], "returns": {}},
+{ "name": "admin_aec_setAskPrice", "params": ["", ""], "returns": true },
+{ "name": "admin_aec_setBidPrice", "params": ["", ""], "returns": true },
+{ "name": "admin_aec_setMining", "params": [true, ""], "returns": true },
+{ "name": "admin_aec_findBlock", "params": ["", ""], "returns": {} },
+{ "name": "admin_aec_blockQueueFirstUnknown", "params": [""], "returns": "" },
+{ "name": "admin_aec_blockQueueRetryUnknown", "params": [""], "returns": true },
+{ "name": "admin_aec_allAccounts", "params": [""], "returns": [] },
+{ "name": "admin_aec_newAccount", "params": [{}, ""], "returns": {} },
+{ "name": "admin_aec_setMiningBenefactor", "params": ["", ""], "returns": true },
+{ "name": "admin_aec_inspect", "params": ["", ""], "returns": {} },
+{ "name": "admin_aec_reprocess", "params": ["", ""], "returns": {} },
+{ "name": "admin_aec_vmTrace", "params": ["", 0, ""], "returns": {} },
+{ "name": "admin_aec_getReceiptByHashAndIndex", "params": ["", 0, ""], "returns": {} },
+{ "name": "miner_start", "params": [0], "returns": true },
+{ "name": "miner_stop", "params": [], "returns": true },
+{ "name": "miner_setaecerbase", "params": [""], "returns": true },
+{ "name": "miner_setExtra", "params": [""], "returns": true },
+{ "name": "miner_setGasPrice", "params": [""], "returns": true },
+{ "name": "miner_hashrate", "params": [], "returns": "" }
+]

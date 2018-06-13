@@ -1,0 +1,211 @@
+defaults:
+
+  update-submodules: &update-submodules
+    run:
+      name: "Update git submodules"
+      command: |
+        git submodule update --init
+
+  environment-info: &environment-info
+    run:
+      name: "Environment info"
+      command: |
+        echo CXX: $CXX
+        $CXX --version
+        $CXX --version > compiler.version
+
+  configure: &configure
+    run:
+      name: "Configure"
+      # Build "out-of-source" to have better coverage report
+      # (ninja is using relative paths otherwise).
+      working_directory: ~/build
+      command: |
+        cmake ../project -G "$GENERATOR" -DCMAKE_BUILD_TYPE=$BUILD_TYPE $CMAKE_OPTIONS
+
+  build: &build
+    run:
+      name: "Build"
+      working_directory: ~/build
+      command: cmake --build . --target package -- -j $BUILD_PARALLEL_JOBS
+
+  test: &test
+    run:
+      name: "Test"
+      working_directory: ~/build
+      command: |
+        if [ $(uname) = Linux ]; then
+          export TMPDIR=/dev/shm
+        fi
+        export aecmio_TEST_PATH=~/project/test/jsontests
+        ctest --output-on-failure -j $TEST_PARALLEL_JOBS
+
+  test-evmc-interpreter: &test-evmc-interpreter
+    run:
+      name: "Test EVMC Interpreter"
+      working_directory: ~/build
+      command: |
+        aecmio_TEST_PATH=~/project/test/jsontests \
+        test/testaec -t GeneralStateTests -- --vm interpreter
+
+  store-package: &store-package
+    store_artifacts:
+      path: ~/build/cpp-aecmio.tar.gz
+      destination: cpp-aecmio.tar.gz
+
+  store-randomcode-seed: &store-randomcode-seed
+    store_artifacts:
+      path: ~/build/test/randomCodeSeed.txt
+      destination: randomCodeSeed.txt
+
+  save-deps-cache: &save-deps-cache
+    cache-save:
+      name: "Save dependencies cache"
+      key: &deps-cache-key deps-4-{{arch}}-{{checksum "compiler.version"}}-{{checksum "cmake/ProjectLibFF.cmake"}}
+      paths:
+        - ~/build/deps
+
+  restore-deps-cache: &restore-deps-cache
+    cache-restore:
+      name: "Restore dependencies cache"
+      key: *deps-cache-key
+
+  upload-coverage-data: &upload-coverage-data
+    run:
+      name: "Upload coverage data"
+      command: |
+        pwd
+        $GCOV --version
+        codecov --required --gcov-exec "$GCOV" --gcov-root ~/build
+
+  save-ccache: &save-ccache
+    save_cache:
+      name: "Save ccache"
+      key: ccache-1-{{arch}}-{{checksum "compiler.version"}}-{{.Branch}}-{{epoch}}
+      paths:
+        - ~/.ccache
+
+  restore-ccache: &restore-ccache
+    restore_cache:
+      name: "Restore ccache"
+      keys:
+        - ccache-1-{{arch}}-{{checksum "compiler.version"}}-{{.Branch}}
+        - ccache-1-{{arch}}-{{checksum "compiler.version"}}
+      paths:
+        - ~/.ccache
+
+  setup-ccache: &setup-ccache
+    run:
+      name: "Setup ccache"
+      command: |
+        ccache --version
+        ccache --show-stats
+        ccache --zero-stats
+        ccache --max-size=3G
+
+  stat-ccache: &stat-ccache
+    run:
+      name: "Show ccache stats"
+      command: |
+        ccache --show-stats
+
+
+version: 2
+jobs:
+
+  linux-clang6:
+    environment:
+      - BUILD_TYPE: Release
+      - CXX: clang++-6.0
+      - CC:  clang-6.0
+      - GCOV: llvm-cov-6.0 gcov
+      - GENERATOR: Ninja
+      - BUILD_PARALLEL_JOBS: 8
+      - TEST_PARALLEL_JOBS: 8
+    docker:
+      - image: aecmio/cpp-build-env:2
+    steps:
+      - checkout
+      - *update-submodules
+      - *environment-info
+      - *restore-deps-cache
+      - *restore-ccache
+      - *setup-ccache
+      - *configure
+      - *build
+      - *stat-ccache
+      - *save-ccache
+      - *save-deps-cache
+      - *store-package
+      - *test
+      - *test-evmc-interpreter
+
+  linux-gcc6:
+    environment:
+      - BUILD_TYPE: RelWithDebInfo
+      - CXX: g++-6
+      - CC:  gcc-6
+      - GCOV: gcov-6
+      - GENERATOR: Ninja
+      - BUILD_PARALLEL_JOBS: 3
+      - TEST_PARALLEL_JOBS: 4
+      - CMAKE_OPTIONS: -DCOVERAGE=ON
+      # TODO: Fix memory leaks reported in leveldb.
+      # - CMAKE_OPTIONS: -DSANITIZE=address
+      # - ASAN_OPTIONS: detect_leaks=0
+    docker:
+      - image: aecmio/cpp-build-env:2
+    steps:
+      - checkout
+      - *update-submodules
+      - *environment-info
+      - *restore-deps-cache
+      - *restore-ccache
+      - *setup-ccache
+      - *configure
+      - *build
+      - *stat-ccache
+      - *save-ccache
+      - *save-deps-cache
+      - *store-package
+      - *test
+      - *test-evmc-interpreter
+      - *upload-coverage-data
+
+  macos-xcode90:
+    environment:
+      - CXX: clang++
+      - GCOV: gcov
+      - GENERATOR: Ninja
+      - BUILD_PARALLEL_JOBS: 8
+      - TEST_PARALLEL_JOBS: 8
+    macos:
+      xcode: "9.0"
+    steps:
+      - checkout
+      - *update-submodules
+      - *environment-info
+      - run:
+          name: "Install macOS dependencies"
+          # Python3 and requests are needed for Hunter upload.
+          command: |
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install -q cmake ninja python3 leveldb
+            pip3 install -q requests gitpython
+      - *restore-deps-cache
+      - *configure
+      - *build
+      - *save-deps-cache
+      - *store-package
+      - *test
+      - *store-randomcode-seed
+
+# TODO: Run GCC6 build only in develop branch.
+# TODO: Enabled nightly builds and add more configs.
+# TODO: Separate builds from testing jobs.
+workflows:
+  version: 2
+  cpp-aecmio:
+    jobs:
+      - macos-xcode90
+      - linux-clang6
+      - linux-gcc6

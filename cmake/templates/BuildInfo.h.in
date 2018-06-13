@@ -1,0 +1,12 @@
+#pragma once
+
+#define aec_PROJECT_VERSION "@PROJECT_VERSION@"
+#define aec_COMMIT_HASH @aec_COMMIT_HASH@
+#define aec_CLEAN_REPO @aec_CLEAN_REPO@
+#define aec_BUILD_TYPE @aec_BUILD_TYPE@
+#define aec_BUILD_OS @aec_BUILD_OS@
+#define aec_BUILD_COMPILER @aec_BUILD_COMPILER@
+#define aec_BUILD_JIT_MODE @aec_BUILD_JIT_MODE@
+#define aec_BUILD_PLATFORM @aec_BUILD_PLATFORM@
+#define aec_BUILD_NUMBER @aec_BUILD_NUMBER@
+#define aec_VERSION_SUFFIX "@aec_VERSION_SUFFIX@"

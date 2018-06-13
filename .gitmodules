@@ -1,0 +1,13 @@
+[submodule "evmjit"]
+	path = evmjit
+	url = https://github.com/aecmio/evmjit
+	branch = develop
+[submodule "test/tests"]
+	path = test/jsontests
+	url = https://github.com/aecmio/tests.git
+[submodule "hera"]
+	path = hera
+	url = https://github.com/ewasm/hera
+[submodule "evmc"]
+	path = evmc
+	url = https://github.com/aecmio/evmc
